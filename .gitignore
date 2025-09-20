@@ -69,3 +69,7 @@ Desktop.ini
 
 # TypeScript
 *.tsbuildinfo
+
+# Catalysta test files
+catalysta/
+test.mjs
