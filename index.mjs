@@ -9,3 +9,17 @@ if (majorVersion < 24) {
     process.exit(1);
 }
 console.log(chalk.bgGreen.bold('READY'), 'Node.js', 'v' + majorVersion);
+
+
+
+const catalysta = {
+    timeStamp() {
+        const now = new Date();
+        const pad = (num, size = 2) => String(num).padStart(size, '0');
+        return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${pad(now.getMilliseconds(), 3)}`;
+    },
+}
+
+
+
+export default catalysta;
