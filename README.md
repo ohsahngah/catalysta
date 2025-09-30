@@ -1,5 +1,5 @@
 <div align="center">
-    <img style="width: 256px;" src="./catalysta/logo-r.webp" />
+    <img style="width: 256px;" src="./logo-r.webp" />
     <p style="font-size: 20px;">- <b>the Dark Web Framework for Witches</b> -</p>
     <p align="center">
         <a href="#1-what-is-catalysta"><strong>WHAT</strong></a> • 
@@ -9,6 +9,8 @@
         <a href="#5-whats-next"><strong>NEXT</strong></a>
     </p>
 </div>
+
+<br />
 
 # 1. What is Catalysta?
 ![node](https://img.shields.io/node/v/catalysta)
@@ -45,6 +47,8 @@ You can easily start Catalysta in your new or existing project with the followin
 ```bash
 > npm install catalysta
 ```
+
+<br />
 
 ### 3-1. Quick Start
 Create the entry point file for **Catalysta** named `index.mjs`. You may choose any filename for the entry point, but the extension must be `.mjs`.
@@ -92,6 +96,8 @@ Oh, and once you get used to these personified concepts such as Handler, Router,
 
 > A Handler refers to a function defined within a Route where the roles of Controller, Helper, and Provider are not separated but mixed together.
 
+<br />
+
 ### 3.2. Usage(API, Implementing Communication Between Apps)
 Now, let’s create a simple API server using the catalysts.mjs file by adopting a development approach that separates roles.
 > 📄 `catalysta > backend > catalysts.mjs`
@@ -129,6 +135,7 @@ catalysta.on('/', function(request, response) {
 ```
 To use the this keyword in this way, you must define functions using the traditional JavaScript function declaration syntax. While function declarations and arrow functions both work, the this keyword cannot be used inside them.
 
+<br />
 
 ### 3-3. Usage(UI, Communication Between Humans and Apps)
 Catalysta renders templates based on EJS.
@@ -157,6 +164,8 @@ Catalysta comes with a built-in layout template that includes a style reset by d
 
 All files inside the frontend folder (except for `.ejs` files) are treated as static assets, so they can be freely accessed within `.ejs` templates. For example, if you place a favicon.ico file in the frontend folder, it will automatically be applied as the website’s favicon in the browser without any additional configuration.
 
+<br />
+
 ### 3-4. Middleware
 If you want to create middleware that responds to all requests, simply don't specify a route in the `on` handler.
 > 📄 `index.mjs`
@@ -168,56 +177,57 @@ catalysta.on(function(request, response) {
 });
 ```
 
+<br />
+
 ### 3-6. APIs
+APIs are provided through the official [Catalysta]() website.
 
+<br />
 
-### 3-5. Pro Tips
+### 3-5. Useful Tips
 Here are some useful tips to help you solve problems more easily using Catalysta in various scenarios.
 
-- [API 서버 만들기]()
-- [로딩화면 만들기]()
-- [파비콘 적용하기]()
-- [모바일 화면 만들기]()
-- [404 페이지 만들기]()
-- [라우트를 임시적으로 제한하기]()
-- [로그남기기]()
-- [파일/이미지 다운로드]()
-- [파일/이미지 업로드]()
-- [로그인 구현하기]()
-- [포트번호 변경하기]()
-- [정적 웹서버 운영하기]()
+- [Creating a Simple API Server]()
+- [Creating a Loading Screen]()
+- [Applying a Favicon]()
+- [Detecting Mobile Devices]()
+- [Creating a 404 Page]()
+- [Temporarily Restricting Routes]()
+- [Logging]()
+- [File Upload and Download]()
+- [Implementing Login]()
+- [Changing the Port Number]()
+- [Running a Static Web Server]()
 
+<br />
 
-# 4. Who's behind Catalysta?(Special Thanks 포함)
-카탈리스타는 현재 수 많은 개발자들과 기여자들, 대한민국 정부의 전폭적인 지원을 받고 있습니다.
+# 4. Who's behind Catalysta?
+Catalysta is currently operated by the developers who use it and the contributors who offer their full, unwavering support.
 
-- [OhSahngAh](https://github.com/ohsahngah) / 카탈리스타의 창시자
-- [OhSahngAh](https://github.com/ohsahngah) / 기여자
-- [OhSahngAh](https://github.com/ohsahngah) / 기여자
+- [OhSahngAh](https://github.com/ohsahngah) / Creator of Catalysta
+- [ChoeJeongHun]() / Contributor
+- [ChoeHyoJin]() / Contributor
+- [ParkBeomChan]() / Contributor
 
+Become a contributor to Catalysta! Attaining contributor status gives you the right to propose agenda items and vote on the future of Catalysta. Additionally, you will be listed in the contributor section of the README file with a link back to you.
+[[Become a sponsor]()]
 
-카탈리스타의 기여자가 되어 주세요. 기여자 지위를 획득하면 카탈리스타의 미래에 대한 안건 상정권과 투표권을 행사할 수 있게 됩니다.
+<br />
 
-광고 이미지
-광고 설명
-만든이
-기여자(후원자) - 기술적, 금전적 지원모두 포함(스페셜땡스)
-사용자
-컨텍포인트
+# 5. What's Next?
+We are building the future of Catalyst with multiple contributors.
 
-### Sponsors
-Become a sponsor and get your logo on our README on GitHub with a link to your site. [[Become a sponsor](https://opencollective.com/preact#sponsor)]
+### Agenda Items
+- Improve README to be easily understood by developers
+- ~~Add a reliable timestamp middleware~~ (Completed)
+- ~~Add a simple logger middleware~~ (Completed)
+- Add a simple authentication middleware
+- Support LevelDB ORM
 
-
-# 5. What's Next?(미래)
-투두리스트(안건)
-향후, Express.js를 제거하여 더 경량화, 더 빠른 프레임워크로 발전할 예정
-LevelDB 통합 및 ORM 추가
-로그인 미들웨어 추가(인증구현 혹은 라이브러리 붙이기)
-조금 더 개발자 친화적이고 쉬운 README 파일 작성
+<br />
 
 ### A Small Request
 This document was originally written in Korean and translated into English so that developers around the world can read it. We have tried to use simple words and expressions in English to make it easy for everyone to understand. However, if you find any words or sentences that are incorrect or awkward, please let us know!
 
-Contact:
-📧 adress@email.com
+Contact:<br />
+📧 ohsahngah@gmail.com
