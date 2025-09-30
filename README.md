@@ -1,5 +1,5 @@
 <div align="center">
-    <img style="width: 256px;" src="./logo-r.webp" />
+    <img width="256" src="https://ohsahngah.github.io/catalysta/logo.webp" />
     <p style="font-size: 20px;">- <b>the Dark Web Framework for Witches</b> -</p>
     <p align="center">
         <a href="#1-what-is-catalysta"><strong>WHAT</strong></a> • 
@@ -38,6 +38,7 @@ In short, Catalysta pursues these goals and ideas:
 - **Integrated Tools**(Backend, API, and frontend in one framework)
 - **Perfect Work Separation**(Backend and frontend tasks are separate)
 - **Evergreen Skills**(You learn it once, you use it forever)
+- **Exceptionally Easy Debugging**(Helpful and clear error messages)
 
 <br />
 
@@ -52,7 +53,9 @@ You can easily start Catalysta in your new or existing project with the followin
 
 ### 3-1. Quick Start
 Create the entry point file for **Catalysta** named `index.mjs`. You may choose any filename for the entry point, but the extension must be `.mjs`.
-> 📄 `index.mjs`
+<br />
+
+📄 `index.mjs`
 ```javascript
 import catalysta from 'catalysta';
 
@@ -100,7 +103,9 @@ Oh, and once you get used to these personified concepts such as Handler, Router,
 
 ### 3.2. Usage(API, Implementing Communication Between Apps)
 Now, let’s create a simple API server using the catalysts.mjs file by adopting a development approach that separates roles.
-> 📄 `catalysta > backend > catalysts.mjs`
+<br />
+
+📄 `catalysta > backend > catalysts.mjs`
 ```javascript
 import catalysta from 'catalysta';
 
@@ -125,7 +130,9 @@ catalysta.dataController = function(request, response) {
 Catalysta offers a unique feature that you won’t find in other frameworks. Specifically, the index.mjs file and the catalysts.mjs file automatically share information and functionality with each other, without the need to explicitly export or import their respective modules (Catalysta objects).
 
 Now, let’s call dataController from index.mjs:
-> 📄 `index.mjs`
+<br />
+
+📄 `index.mjs`
 ```javascript
 import catalysta from 'catalysta';
 
@@ -139,7 +146,9 @@ To use the this keyword in this way, you must define functions using the traditi
 
 ### 3-3. Usage(UI, Communication Between Humans and Apps)
 Catalysta renders templates based on EJS.
-> 📄 `index.mjs`
+<br />
+
+📄 `index.mjs`
 ```javascript
 import catalysta from 'catalysta';
 
@@ -154,7 +163,9 @@ Interpreting the code above, it means that Catalysta will look for the home.ejs 
 If the home.ejs template file does not exist and there is no data object to pass, Catalysta will simply output the string "home" on the page for that route.
 
 Once a handler for the /home route is written, you can then create the corresponding home.ejs template file inside the frontend folder.
-> 📄 `catalysta > frontend > home.ejs`
+<br />
+
+📄 `catalysta > frontend > home.ejs`
 ```html
 <h1>Hello, this is <%= title %>!</h1>
 ```
@@ -168,7 +179,9 @@ All files inside the frontend folder (except for `.ejs` files) are treated as st
 
 ### 3-4. Middleware
 If you want to create middleware that responds to all requests, simply don't specify a route in the `on` handler.
-> 📄 `index.mjs`
+<br />
+
+📄 `index.mjs`
 ```javascript
 import catalysta from 'catalysta';
 
@@ -180,7 +193,7 @@ catalysta.on(function(request, response) {
 <br />
 
 ### 3-6. APIs
-APIs are provided through the official [Catalysta]() website.
+APIs are provided through the official [Catalysta](https://github.com/ohsahngah/catalysta) website.
 
 <br />
 

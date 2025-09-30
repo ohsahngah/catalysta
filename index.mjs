@@ -1,6 +1,6 @@
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import url from 'url';
-import path from 'path';
 import axios from 'axios';
 import express from 'express';
 import chalk from 'chalk';
@@ -15,10 +15,15 @@ const UAParser = require('ua-parser-js');
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
+const PROJECT_ROOT = __dirname;
+
 const app = express();
 const router = express.Router();
 
-const logFilePath = path.join(__dirname, 'catalysta', 'access.log');
+
+const logFilePath = path.join(PROJECT_ROOT, 'catalysta', 'access.log');
+
 const MAX_LOG_LINES = 1000;
 let logQueue = Promise.resolve();
 let customNotFoundHandler = null;
@@ -27,6 +32,9 @@ let customErrorHandler = null;
 async function logToFile(logMessage) {
     logQueue = logQueue.then(async () => {
         try {
+            const logDir = path.dirname(logFilePath);
+            await fs.mkdir(logDir, { recursive: true });
+            
             await fs.appendFile(logFilePath, logMessage + '\n', 'utf8');
             const data = await fs.readFile(logFilePath, 'utf8');
             const lines = data.split('\n');
@@ -37,10 +45,10 @@ async function logToFile(logMessage) {
                 await fs.writeFile(logFilePath, newContent, 'utf8');
             }
         } catch (err) {
-            console.error(chalk.bgRed.bold('ERROR'), 'Failed to write to log file:', err);
+            console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'Failed to write to log file:');
         }
     }).catch(err => {
-        console.error(chalk.bgRed.bold('ERROR'), 'An error occurred in the log queue:', err);
+        console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'An error occurred in the log queue:');
         logQueue = Promise.resolve();
     });
 }
@@ -59,10 +67,11 @@ async function setupProjectStructure() {
                 `
             },
             { dir: 'frontend', name: 'styles.css', content: `body { background-color: #1a1a1a; color: #e0e0e0; }` },
-            { dir: 'frontend', name: 'scripts.js', content: `alert('scripts.js file loaded!');` }
+            { dir: 'frontend', name: 'scripts.js', content: `console.log('scripts.js file loaded!');` }
         ]
     };
-    const baseDir = path.join(__dirname, config.mainDir);
+
+    const baseDir = path.join(PROJECT_ROOT, config.mainDir); 
     const uniqueDirs = [...new Set(config.files.map(f => path.join(baseDir, f.dir)))];
 
     try {
@@ -71,11 +80,11 @@ async function setupProjectStructure() {
             const fullPath = path.join(baseDir, dir, name);
             const relativePath = path.posix.join(config.mainDir, dir, name);
             try {
-                await fs.writeFile(fullPath, content.trim(), { flag: 'wx' });
-                console.log(`Created: ${relativePath}`);
+                await fs.writeFile(fullPath, content.trim(), { flag: 'wx' }); 
+                console.log(chalk.bgGreen.bold(' OK '), `Created: ${relativePath}`);
             } catch (err) {
                 if (err.code === 'EEXIST') {
-                    console.log(`Exists: ${relativePath}`);
+                    console.log(chalk.bgGreen.bold(' OK '), `Exists: ${relativePath}`);
                 } else {
                     throw err;
                 }
@@ -83,7 +92,7 @@ async function setupProjectStructure() {
         }));
         console.log('\nProject setup complete!');
     } catch (err) {
-        console.error('Setup failed:', err);
+        console.error(chalk.bgRed.bold(' ERROR '), 'Setup failed.');
         process.exit(1);
     }
 }
@@ -134,13 +143,24 @@ const catalysta = {
         return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}`;
     },
     logger(req, res) {
+        if (!req || !res) {
+            console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'Request and response parameters are required.');
+            process.exit(1);
+        }
+        if (typeof req !== 'object' || typeof res !== 'object') {
+            console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'Request and response must be objects.');
+            process.exit(1);
+        }
+
         const start = performance.now();
+
         const parser = new UAParser();
         const ua = parser.setUA(req.headers['user-agent']).getResult();
         const browser = `${ua.browser.name || 'Unknown'} ${ua.browser.version || ''}`;
         const os = `${ua.os.name || 'Unknown'} ${ua.os.version || ''}`;
         const device = ua.device.type || 'desktop';
-        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'Unknown IP';
+
         res.once('finish', () => {
             const duration = performance.now() - start;
             const statusCode = res.statusCode;
@@ -150,12 +170,14 @@ const catalysta = {
                 `Status: ${statusCode}`, '|', `IP: ${ip}`, '|', `Browser: ${browser}`, '|',
                 `OS: ${os}`, '|', `Device: ${device}`
             ].join(' ');
+            
             console.log(logMessage);
             if (this.writeToFile) {
                 logToFile(logMessage);
             }
         });
     },
+
     off(path) {
         router.all(path, (req, res) => {
             console.log(`Access to route [${path}] has been disabled (403 Forbidden).`);
@@ -208,29 +230,34 @@ global.catalysta = catalysta;
 (async () => {
     const majorVersion = parseInt(process.versions.node, 10);
     if (majorVersion < 24) {
-        console.error(chalk.bgRed.bold('ERROR'), "Incompatible Node.js version. Catalysta needs v24 or higher, but you're using", 'v' + majorVersion);
+        console.error(chalk.bgRed.bold(' ERROR '), "Incompatible Node.js version. Catalysta needs v24 or higher, but you're using", 'v' + majorVersion);
         process.exit(1);
     }
-    console.log(chalk.bgGreen.bold('READY'), 'Node.js', 'v' + majorVersion);
+    console.log(chalk.bgGreen.bold(' OK '), 'Node.js', 'v' + majorVersion);
 
     const majorExpressVersion = parseInt(expressVersion.split('.')[0], 10);
     if (majorExpressVersion < 5) {
-        console.error(chalk.bgRed.bold('ERROR'), "Incompatible Express.js version. Catalysta needs v5 or higher, but you're using", 'v' + expressVersion);
+        console.error(chalk.bgRed.bold(' ERROR '), "Incompatible Express.js version. Catalysta needs v5 or higher, but you're using", 'v' + expressVersion);
         process.exit(1);
     }
-    console.log(chalk.bgGreen.bold('READY'), 'Express.js', 'v' + majorExpressVersion);
+    console.log(chalk.bgGreen.bold(' OK '), 'Express.js', 'v' + majorExpressVersion);
 
     await setupProjectStructure();
 
     app.set('view engine', 'ejs');
-    app.set('views', path.join(__dirname, 'catalysta', 'frontend'));
-    app.use(express.static(path.join(__dirname, 'catalysta', 'frontend')));
+    app.set('views', path.join(PROJECT_ROOT, 'catalysta', 'frontend'));
+
+    app.use(express.static(path.join(PROJECT_ROOT, 'catalysta', 'frontend')));
+    
     app.use(express.json({ limit: '100kb' }));
     app.use(express.urlencoded({ extended: true }));
 
     app.use((req, res, next) => {
         if (req.path.endsWith('.ejs')) {
-            return res.status(404).send('Not Found');
+            console.warn(chalk.bgYellow.bold(' WARN '), 'Received a request for an EJS file from the client, but it was denied.');
+            return res.status(403).send({
+                "catalysta": { "status": { "code": 403, "desc": "forbidden" } }
+            });
         }
         req.api = catalysta.api; 
         res.display = async function (partial, data = {}) {
@@ -247,7 +274,7 @@ global.catalysta = catalysta;
                 fileExists = true;
             } catch (error) {
                 if (error.code !== 'ENOENT') {
-                    console.error('Error checking for view file:', error);
+                    console.error(chalk.bgRed.bold(' ERROR '), 'There\'s a problem with the', chalk.yellow.bold(partial), 'template file!');
                     return res.status(500).send('Internal Server Error.');
                 }
             }
@@ -313,7 +340,11 @@ global.catalysta = catalysta;
     });
 
     try {
-        await import('./catalysta/backend/catalysts.mjs');
+        const catalystsAbsolutePath = path.join(PROJECT_ROOT, 'catalysta', 'backend', 'catalysts.mjs');
+        const catalystsUrl = url.pathToFileURL(catalystsAbsolutePath).href;
+        
+        await import(catalystsUrl);
+
         app.use(router);
         app.use((req, res, next) => {
             res.status(404);
