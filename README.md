@@ -102,20 +102,20 @@ Oh, and once you get used to these personified concepts such as Handler, Router,
 <br />
 
 ### 3.2. Usage(API, Implementing Communication Between Apps)
-Now, let’s create a simple API server using the catalysts.mjs file by adopting a development approach that separates roles.
+Now, let’s create a simple API server using the `catalysts.mjs` file by adopting a development approach that separates roles.
 <br />
 
 📄 `catalysta > backend > catalysts.mjs`
 ```javascript
-import catalysta from 'catalysta';
-
 // Private Functions
 // Define internal helpers or models that should be hidden
 function dataProvider() {
-    return [
-        { id: 1, title: 'One' },
-        { id: 2, title: 'Two' }
-    ];
+    return {
+        dataset: [
+            { id: 1, title: 'One' },
+            { id: 2, title: 'Two' }
+        ]
+    }
 };
 
 

@@ -1,3 +1,7 @@
+process.on('uncaughtException', () => {});
+process.on('unhandledRejection', () => {});
+
+
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import url from 'url';
@@ -24,34 +28,37 @@ const router = express.Router();
 
 const logFilePath = path.join(PROJECT_ROOT, 'catalysta', 'access.log');
 
-const MAX_LOG_LINES = 1000;
 let logQueue = Promise.resolve();
 let customNotFoundHandler = null;
 let customErrorHandler = null;
+
+const MAX_LOG_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 async function logToFile(logMessage) {
     logQueue = logQueue.then(async () => {
         try {
             const logDir = path.dirname(logFilePath);
             await fs.mkdir(logDir, { recursive: true });
-            
-            await fs.appendFile(logFilePath, logMessage + '\n', 'utf8');
-            const data = await fs.readFile(logFilePath, 'utf8');
-            const lines = data.split('\n');
 
-            if (lines.length > MAX_LOG_LINES) {
-                const trimmedLines = lines.slice(-MAX_LOG_LINES);
-                const newContent = trimmedLines.join('\n');
-                await fs.writeFile(logFilePath, newContent, 'utf8');
+            await fs.appendFile(logFilePath, logMessage + '\n', 'utf8');
+
+            // 파일 크기 확인
+            const stats = await fs.stat(logFilePath);
+            if (stats.size > MAX_LOG_SIZE_BYTES) {
+                console.warn(chalk.bgYellow.bold(' LOGGER:WARN '),
+                    `Log file exceeds ${MAX_LOG_SIZE_BYTES / 1024 / 1024}MB (${(stats.size / 1024 / 1024).toFixed(2)}MB): ${logFilePath}`
+                );
+                // 기능 추가
             }
         } catch (err) {
-            console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'Failed to write to log file:');
+            console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'Failed to write or check log file.');
         }
     }).catch(err => {
-        console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'An error occurred in the log queue:');
+        console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'An error occurred in the log queue.');
         logQueue = Promise.resolve();
     });
 }
+
 
 async function setupProjectStructure() {
     const config = {
@@ -66,31 +73,56 @@ async function setupProjectStructure() {
 // e.g., catalysta.on('/', function(req, res) { this.logger(req, res); res.display('index'); });
                 `
             },
+            { dir: 'frontend', name: 'index.ejs', content: `<h1>Hello, Catalysta!</h1>` },
             { dir: 'frontend', name: 'styles.css', content: `body { background-color: #1a1a1a; color: #e0e0e0; }` },
             { dir: 'frontend', name: 'scripts.js', content: `console.log('scripts.js file loaded!');` }
         ]
     };
 
-    const baseDir = path.join(PROJECT_ROOT, config.mainDir); 
+    const baseDir = path.join(PROJECT_ROOT, config.mainDir);
     const uniqueDirs = [...new Set(config.files.map(f => path.join(baseDir, f.dir)))];
 
     try {
         await Promise.all(uniqueDirs.map(dir => fs.mkdir(dir, { recursive: true })));
+
         await Promise.all(config.files.map(async ({ dir, name, content }) => {
             const fullPath = path.join(baseDir, dir, name);
             const relativePath = path.posix.join(config.mainDir, dir, name);
             try {
-                await fs.writeFile(fullPath, content.trim(), { flag: 'wx' }); 
-                console.log(chalk.bgGreen.bold(' OK '), `Created: ${relativePath}`);
+                await fs.writeFile(fullPath, content.trim(), { flag: 'wx' });
+                console.log(chalk.bgGreen.bold(' OK '), `Added ${relativePath}`);
             } catch (err) {
                 if (err.code === 'EEXIST') {
-                    console.log(chalk.bgGreen.bold(' OK '), `Exists: ${relativePath}`);
+                    console.log(chalk.bgGreen.bold(' OK '), `Found ${relativePath}`);
                 } else {
                     throw err;
                 }
             }
         }));
-        console.log('\nProject setup complete!');
+
+        const sourceFavicon = path.join(PROJECT_ROOT, 'node_modules', 'catalysta', 'favicon.ico');
+        const targetFavicon = path.join(baseDir, 'frontend', 'favicon.ico');
+
+        try {
+            await fs.access(targetFavicon);
+            console.log(chalk.bgGreen.bold(' OK '), `Found catalysta/frontend/favicon.ico`);
+        } catch (accessErr) {
+            if (accessErr.code === 'ENOENT') {
+                try {
+                    await fs.copyFile(sourceFavicon, targetFavicon);
+                    console.log(chalk.bgGreen.bold(' OK '), `Added catalysta/frontend/favicon.ico`);
+                } catch (copyErr) {
+                    if (copyErr.code === 'ENOENT') {
+                        console.warn(chalk.bgYellow.bold(' NG '), `Source favicon.ico not found!`);
+                    } else {
+                        throw copyErr;
+                    }
+                }
+            } else {
+                throw accessErr;
+            }
+        }
+
     } catch (err) {
         console.error(chalk.bgRed.bold(' ERROR '), 'Setup failed.');
         process.exit(1);
@@ -180,7 +212,7 @@ const catalysta = {
 
     off(path) {
         router.all(path, (req, res) => {
-            console.log(`Access to route [${path}] has been disabled (403 Forbidden).`);
+            console.log(chalk.bgYellow.bold(' WARN '), `Access to route [${path}] has been disabled.`);
             res.status(403).json({
                 "catalysta": { "status": { "code": 403, "desc": "forbidden" } }
             });
@@ -228,44 +260,54 @@ const catalysta = {
 global.catalysta = catalysta;
 
 (async () => {
+    console.log(chalk.bold('Catalista is preparing your project!\n'));
+
     const majorVersion = parseInt(process.versions.node, 10);
     if (majorVersion < 24) {
         console.error(chalk.bgRed.bold(' ERROR '), "Incompatible Node.js version. Catalysta needs v24 or higher, but you're using", 'v' + majorVersion);
         process.exit(1);
     }
-    console.log(chalk.bgGreen.bold(' OK '), 'Node.js', 'v' + majorVersion);
+    console.log(chalk.bgGreen.bold(' OK '), 'Found Node.js', 'v' + majorVersion);
 
     const majorExpressVersion = parseInt(expressVersion.split('.')[0], 10);
     if (majorExpressVersion < 5) {
         console.error(chalk.bgRed.bold(' ERROR '), "Incompatible Express.js version. Catalysta needs v5 or higher, but you're using", 'v' + expressVersion);
         process.exit(1);
     }
-    console.log(chalk.bgGreen.bold(' OK '), 'Express.js', 'v' + majorExpressVersion);
+    console.log(chalk.bgGreen.bold(' OK '), 'Found Express.js', 'v' + majorExpressVersion);
 
     await setupProjectStructure();
 
     app.set('view engine', 'ejs');
     app.set('views', path.join(PROJECT_ROOT, 'catalysta', 'frontend'));
 
-    app.use(express.static(path.join(PROJECT_ROOT, 'catalysta', 'frontend')));
-    
-    app.use(express.json({ limit: '100kb' }));
-    app.use(express.urlencoded({ extended: true }));
-
     app.use((req, res, next) => {
         if (req.path.endsWith('.ejs')) {
             console.warn(chalk.bgYellow.bold(' WARN '), 'Received a request for an EJS file from the client, but it was denied.');
-            return res.status(403).send({
+            res.status(403).json({
                 "catalysta": { "status": { "code": 403, "desc": "forbidden" } }
             });
         }
+        next();
+    });
+
+    app.use(express.static(path.join(PROJECT_ROOT, 'catalysta', 'frontend')));
+    
+    app.use(express.json({ limit: '1mb' }));
+    app.use(express.urlencoded({ extended: true }));
+
+    app.use((req, res, next) => {
         req.api = catalysta.api; 
         res.display = async function (partial, data = {}) {
             if (typeof partial === 'object' && partial !== null && !Array.isArray(partial)) {
                 return res.json(partial);
             }
             if (typeof partial !== 'string' || !partial.trim()) {
-                return res.status(400).send('Invalid argument: Must be an object for JSON, a view name, or a string for plain text.');
+                console.error(chalk.bgRed.bold(' ERROR '), 'The argument is invalid and must be an object for JSON or a string for view.');
+                res.status(500).json({
+                    "catalysta": { "status": { "code": 500, "desc": "internalServerError" } }
+                });
+                process.exit(1);
             }
             const viewPath = path.join(this.app.get('views'), partial + '.ejs');
             let fileExists = false;
@@ -275,7 +317,9 @@ global.catalysta = catalysta;
             } catch (error) {
                 if (error.code !== 'ENOENT') {
                     console.error(chalk.bgRed.bold(' ERROR '), 'There\'s a problem with the', chalk.yellow.bold(partial), 'template file!');
-                    return res.status(500).send('Internal Server Error.');
+                    return res.status(500).json({
+                        "catalysta": { "status": { "code": 500, "desc": "internalServerError" } }
+                    });
                 }
             }
             const isValidViewName = /^[a-zA-Z0-9_\-\/]+$/.test(partial);
@@ -290,11 +334,10 @@ global.catalysta = catalysta;
             }
             res.render(partial, data, (err, content) => {
                 if (err) {
-                    console.error('Partial render error:', err);
-                    if (err.message.includes('Failed to lookup view')) {
-                        return res.status(404).send(`Template not found: ${partial}.ejs`);
-                    }
-                    return res.status(500).send('Error rendering partial view.');
+                    console.error(chalk.bgRed.bold(' ERROR '), 'Error rendering partial view.');
+                    return res.status(500).json({
+                        "catalysta": { "status": { "code": 500, "desc": "internalServerError" } }
+                    });
                 }
                 const lower = content.toLowerCase();
                 const forbiddenTags = new Set(['<html', '<head', '<body', '<meta', '<title', '<link', '<!doctype']);
@@ -307,7 +350,10 @@ global.catalysta = catalysta;
                 }
                 if (forbiddenTagFound) {
                     const safeTag = forbiddenTagFound.replace(/</g, '&lt;');
-                    return res.status(400).send(`Partial must not include root HTML tags like ${safeTag}`);
+                    console.error(chalk.bgRed.bold(' ERROR '), `Partial must not include root HTML tags like ${safeTag}`);
+                    return res.status(500).json({
+                        "catalysta": { "status": { "code": 500, "desc": "internalServerError" } }
+                    });
                 }
                 const html = `
 <!DOCTYPE html>
@@ -360,7 +406,7 @@ global.catalysta = catalysta;
             if (typeof customErrorHandler === 'function') {
                 return customErrorHandler(err, req, res, next);
             }
-            console.error(chalk.red.bold('INTERNAL SERVER ERROR:', err.stack));
+            console.error(chalk.bgRed.bold(' ERROR '), 'Internal server error.');
             if (!res.headersSent) {
                 res.json({
                     "catalysta": { "status": { "code": 500, "desc": "internalServerError" } }
@@ -368,10 +414,10 @@ global.catalysta = catalysta;
             }
         });
         app.listen(catalysta.port || 4444, () => {
-            console.log(`\nCatalysta server running at: http://localhost:${catalysta.port || 4444}`);
+            console.log(chalk.bold('\nCatalysta server running at:'), chalk.green.bold(`http://localhost:${catalysta.port || 4444}`));
         });
     } catch (err) {
-        console.error('Critical: Could not load catalysta module. Server cannot start.', err);
+        console.error(chalk.bgRed.bold(' ERROR '), 'Could not load catalysta module. Server cannot start.');
         process.exit(1);
     }
 })();
