@@ -42,13 +42,12 @@ async function logToFile(logMessage) {
 
             await fs.appendFile(logFilePath, logMessage + '\n', 'utf8');
 
-            // 파일 크기 확인
             const stats = await fs.stat(logFilePath);
             if (stats.size > MAX_LOG_SIZE_BYTES) {
                 console.warn(chalk.bgYellow.bold(' LOGGER:WARN '),
                     `Log file exceeds ${MAX_LOG_SIZE_BYTES / 1024 / 1024}MB (${(stats.size / 1024 / 1024).toFixed(2)}MB): ${logFilePath}`
                 );
-                // 기능 추가
+                // Add feature
             }
         } catch (err) {
             console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'Failed to write or check log file.');
