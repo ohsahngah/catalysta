@@ -337,7 +337,7 @@ This document only introduces a few of the most useful built-in helpers. The usa
 <br />
 
 ### 3-5. Useful Tips
-Here are some useful tips to help you solve problems more easily using Catalysta in various scenarios.
+Here are some useful tips to help you solve problems more easily using **Catalysta** in various scenarios.
 
 - [Creating a Simple API Server]()
 - [Creating a Loading Screen]()
@@ -355,25 +355,25 @@ Here are some useful tips to help you solve problems more easily using Catalysta
 <br />
 
 # 4. Who's behind Catalysta?
-Catalysta is currently operated by the developers who use it and the contributors who offer their full, unwavering support.
+**Catalysta** is currently operated by the developers who use it and the contributors who offer their full, unwavering support.
 
 - [OhSahngAh](https://github.com/ohsahngah) / Creator of Catalysta
 - [ChoeJeongHun]() / Contributor
 - [ChoeHyoJin]() / Contributor
 - [ParkBeomChan]() / Contributor
 
-Become a contributor to Catalysta! Attaining contributor status gives you the right to propose agenda items and vote on the future of Catalysta. Additionally, you will be listed in the contributor section of the README file with a link back to you.
+Become a contributor to **Catalysta**! Attaining contributor status gives you the right to propose agenda items and vote on the future of **Catalysta**. Additionally, you will be listed in the contributor section of the `README` file with a link back to you.
 [[Become a sponsor]()]
 
 <br />
 
 # 5. What's Next?
-We are building the future of Catalyst with multiple contributors.
+We are building the future of **Catalysta** with multiple contributors.
 
 ### Agenda Items
 - Improve README to be easily understood by developers
-- ~~Add a reliable timestamp middleware~~ (Completed)
-- ~~Add a simple logger middleware~~ (Completed)
+- ~~Add a reliable timestamp middleware~~ (**Completed**)
+- ~~Add a simple logger middleware~~ (**Completed**)
 - Add a simple authentication middleware
 - Support LevelDB ORM
 
@@ -382,5 +382,5 @@ We are building the future of Catalyst with multiple contributors.
 ### A Small Request
 This document was originally written in Korean and translated into English so that developers around the world can read it. We have tried to use simple words and expressions in English to make it easy for everyone to understand. However, if you find any words or sentences that are incorrect or awkward, please let us know!
 
-Contact:<br />
-📧 ohsahngah@gmail.com
+**Contact:** <br />
+📧 **ohsahngah@gmail.com**
