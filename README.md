@@ -23,6 +23,8 @@
 
 **Catalysta** is an AI-friendly web framework for Node.js. We named it `Catalysta` because of its incredible speed, which works like a "witch's catalyst" to make your ideas happen unbelievably fast.
 
+<img width="100%" src="https://ohsahngah.github.io/catalysta/code.webp" />
+<p align="right">(Catalysta's router code structure)</p>
 <br />
 
 # 2. Why Use Catalysta?
@@ -39,6 +41,8 @@ In short, **Catalysta** pursues these goals and ideas:
 - **Perfect Work Separation**(Backend and frontend tasks are separate)
 - **Evergreen Skills**(You learn it once, you use it forever)
 - **Exceptionally Easy Debugging**(Helpful and clear error messages)
+
+At the core of **Catalysta** is its unique 'Scroll-based System', which treats all backend logic as one continuous script. This approach not only simplifies state management for developers but also provides a single, coherent context that is incredibly intuitive for AI assistants to understand, modify, and extend.
 
 <br />
 
@@ -59,18 +63,17 @@ Create the entry point file for **Catalysta** named `index.mjs`. You may choose 
 ```javascript
 import catalysta from 'catalysta';
 
-catalysta.on('/', function(request, response) {
+catalysta('/', function(request, response) {
     response.display('<h1> Hello, Catalysta! </h1>');
 });
 ```
-Unlike typical web frameworks, **Catalysta** does not require calling functions like `app.start()` or `app.listen()` to initialize the module or start the server. This is because each route is treated as a standalone micro web server.
+Unlike typical web frameworks, **Catalysta** does not require calling functions like `app.start()` or `app.listen()` to initialize the module or start the server. This is because each `Router` is treated as a standalone micro web server.
 
 Now run the index.mjs file using Node.js to start the web server:
 ```bash
 > node index.mjs
 ```
 The default port number for **Catalysta** is `4444`. Now, if you open a web browser and visit `localhost:4444`, you will see the message "Hello, Catalysta!" displayed in large text.
-
 
 You may have noticed that when the entry point file is first executed, the smart **Catalysta** automatically generates an optimized project structure.
 ```plaintext
@@ -79,7 +82,7 @@ your-project/
 ├── catalysta/
 │   │
 │   ├── backend/
-│   │   └── catalysts.mjs          # Core business logic (acts as Helper, Provider, Controller)
+│   │   └── catalysts.mjs (Business logic: acts as Helper/Provider/Handler)
 │   │
 │   ├── frontend/
 │   │   ├── favicon.ico
@@ -89,222 +92,181 @@ your-project/
 │   │
 │   └── access.log
 │
-└── index.mjs                      # Entry point of Catalysta (acts as Router)
+└── index.mjs (Entry point of Catalysta: acts as Router)
 ```
-As you can see, inside the **Catalysta** folder, the structure is divided into backend and frontend. If backend and frontend developers need to collaborate, they don’t have to worry about each other’s folders. Unlike other frameworks, **Catalysta** uses a scroll system, a one-file backend system. This means that backend developers can implement almost all business logic in the `catalysts.mjs` file.
+As you can see, inside the **Catalysta** folder, the structure is divided into backend and frontend. If backend and frontend developers need to collaborate, they don’t have to worry about each other’s folders. Unlike other frameworks, **Catalysta** uses a `scroll system`, a one-file backend system. This means that backend developers can implement almost all business logic in the `catalysts.mjs` file.
 
-The entry point file can be used in many ways, but its basic role is to act as a Router, connecting Routes with Controllers. With this file, Catalysta developers can view all Routes at a glance.
+The entry point file can be used in many ways, but its basic role is to act as a Router, connecting Routes with Handlers. With this file, Catalysta developers can view all Routes at a glance.
 
-The `catalysts.mjs` file, which contains all business logic, can also be used in various ways, but its basic role is to act as a Helper, Controller, and Provider(Model) that can store or retrieve data.
-Oh, and once you get used to these personified concepts such as Handler, Router, Helper, Controller, and Provider, you’ll find that development becomes highly logical.
+The `catalysts.mjs` file, which contains all business logic, can also be used in various ways, but its basic role is to act as a Helper, Handler, and Provider(Model) that can store or retrieve data.
+Oh, and once you get used to these personified concepts such as Handler, Router, Helper, and Provider, you’ll find this personified approach makes development more intuitive and logical.
 
-**For reference:** <br />
-A `Handler` refers to a function defined within a Route where the roles of Controller, Helper, and Provider are not separated but mixed together.
-
-<br />
-
-### 3.2. Usage(API, Implementing Communication Between Apps)
-Now, let’s create a simple API server using the `catalysts.mjs` file by adopting a development approach that separates roles.
+Now, let's build a simple API server by applying a development approach that leverages **Catalysta**'s structure.
 <br />
 
 📄 `catalysta > backend > catalysts.mjs`
 ```javascript
-// Private Functions
-// Define internal helpers or models that should be hidden
-function dataProvider() {
-    return {
-        dataset: [
-            { id: 1, title: 'One' },
-            { id: 2, title: 'Two' }
-        ]
-    }
-};
+catalysta.sortHelper = function(request, response) { ... };
 
-// Public Functions
-// Define middleware or controllers
-catalysta.dataController = function(request, response) {
-    const dataObject = dataProvider();
+catalysta.taskProvider = function(request, response) { ... };
+
+catalysta.taskHandler = function(request, response) {
+    const tasks = this.taskProvider(request, response);
+    const sortedTasks = this.sortHelper(tasks, 'createdAt', true);
     if (request.isGet) {
-        response.display(dataObject);
+        response.display(sortedTasks);
     }
 };
 ```
 **Catalysta** offers a unique feature that you won’t find in other frameworks. Specifically, the index.mjs file and the `catalysts.mjs` file automatically share information and functionality with each other, without the need to explicitly export or import their respective modules(**Catalysta** objects).
 
-Now, let’s call `dataController` from `index.mjs`:
+Now, let’s call `taskHandler` from `index.mjs`:
 <br />
 
 📄 `index.mjs`
 ```javascript
 import catalysta from 'catalysta';
 
-catalysta.on('/', function(request, response) {
-    this.dataController(request, response);
+catalysta('/tasks', function(request, response) {
+    this.taskHandler(request, response);
 });
 ```
 To use the `this` keyword in this way, you must define functions using the traditional JavaScript function declaration syntax. While function declarations and arrow functions both work, the this keyword cannot be used inside them.
 
 <br />
 
-### 3-3. Usage(UI, Communication Between Humans and Apps)
-**Catalysta** renders templates based on `EJS`.
+### 3-2. Usage(Router)
+A router essentially maps routes(paths) to their corresponding handlers.
 <br />
 
 📄 `index.mjs`
 ```javascript
 import catalysta from 'catalysta';
 
-catalysta.on('/home', function(request, response) {
+catalysta('/task{/:id}', async (request, response) => {
+    const { id } = request.params;
+    if (!id) {
+        return response.display('The request did not include a Task ID.');
+    }
+    if (request.isDelete) {
+        const url = `http://localhost:3000/task/${id}`;
+        await request.api('DELETE', url);
+    }
+});
+```
+Alternatively, it can map states to handlers instead of routes.
+<br />
+
+📄 `index.mjs`
+```javascript
+import catalysta from 'catalysta';
+
+catalysta(404, function(request, response) {
+    response.status(404).display('Not found!');
+});
+
+catalysta('error', function(request, response) {
+    response.status(500).display('Internal server error!');
+});
+```
+If a route or state is not mapped to a handler, the router will respond to all incoming requests. Since an unmapped router behaves like middleware, it can be effectively used for tasks such as logging.
+<br />
+
+📄 `index.mjs`
+```javascript
+import catalysta from 'catalysta';
+
+catalysta(function(request, response) {
+    this.logger(request, response);
+});
+```
+The router best represents the minimalism that **Catalysta** aims for. In Catalysta, a single router is like a micro web service that can start immediately without any additional configuration.
+
+**Catalysta** introduces a highly abstracted concept that allows routers to be temporarily deactivated—essentially stopping a micro web service. This makes it possible to control access to the web service.
+<br />
+
+📄 `index.mjs`
+```javascript
+import catalysta from 'catalysta';
+
+catalysta('/', function(request, response) {
+    this.homeHandler(request, response);
+});
+
+catalysta('/test', function(request, response) {
+    this.testHandler(request, response);
+}, false);
+```
+By integrating all routers into the `index.mjs` file, developers can easily manage them at a glance.
+This allows developers to gain a clearer understanding of the overall web service they are responsible for—just by looking at the `index.mjs` file.
+
+<br />
+
+### 3-3. Usage(Handler)
+A handler is responsible for processing the request passed from the router—much like a chef receiving an order ticket. Within a handler, you can use helpers and providers to handle the request.
+<br />
+
+📄 `catalysta > backend > catalysts.mjs`
+```javascript
+catalysta.homeHandler = function(request, response) {
     response.display('home', {
         title: 'Home Page!'
     });
-});
+};
 ```
-Interpreting the code above, it means that **Catalysta** will look for the `home.ejs` template file and pass the data object `{ title: 'Home Page' }` to it. This development approach is similar to the `MVC` design pattern, allowing you to separate business logic from presentation logic. As a result, it creates an environment where backend and frontend developers can collaborate effectively.
+Handlers can be defined directly inside the router, but for better readability, it is recommended to define them separately in the catalysts.mjs file.
+
+### 3-4. Usage(Helper)
+Like cooking tools used by a chef, helpers provide useful functionalities needed during development. Helpers can be categorized into built-in helpers and custom helpers created by developers.
+Built-in helpers are further divided into this-based helpers and parameter-based helpers.
+In this section, we’ll introduce the built-in helper `response.display()`, which is commonly used inside handlers.
+
+The `response.display()` helper provides the necessary information to the requester. Responses can be rendered beautifully in a web browser, or delivered as structured JSON data. The `response.display()` helper supports three formats for output: Object, Text, and Template.
+<br />
+
+📄 `catalysta > backend > catalysts.mjs`
+```javascript
+catalysta.objectHandler = function(request, response) {
+    response.display({ title: 'Home Page!' });
+};
+
+catalysta.textHandler = function(request, response) {
+    response.display('<h1> Hello, Catalysta! </h1>');
+};
+
+catalysta.templateHandler = function(request, response) {
+    response.display('home', { title: 'Home Page!' });
+};
+```
+When using the `response.display()` helper with a template, EJS is used as the view engine. As expected, data can be passed to the EJS template in the form of an object.
+
+**Catalysta** renders templates based on EJS. Interpreting the code above, it means that **Catalysta** will look for the `home.ejs` template file and pass the data object `{ title: 'Home Page' }` to it. This development approach is similar to the MVC design pattern, allowing you to separate business logic from presentation logic. As a result, it creates an environment where backend and frontend developers can collaborate effectively.
 
 If the `home.ejs` template file does not exist and there is no data object to pass, **Catalysta** will simply output the string "home" on the page for that route.
 
 Once a handler for the `/home` route is written, you can then create the corresponding `home.ejs` template file inside the frontend folder.
+
 <br />
 
 📄 `catalysta > frontend > home.ejs`
 ```html
 <h1> Hello, this is <%= title %> </h1>
 ```
-The data object passed from the handler can be rendered using `EJS` syntax, such as `<%= title %>`.
+The data object passed from the handler can be rendered using EJS syntax, such as `<%= title %>`.
 
-**Catalysta** comes with a built-in layout template that includes a style reset by default. Therefore, you only need to structure the part inside the `<body>` tag of a standard HTML document. If tags that cannot be used inside the `<body>` tag, such as `<head>` or `<title>`, are inserted into the template, **Catalysta** will refuse to render it.
+**Catalysta** comes with a built-in layout template that includes a style reset by default. Therefore, you only need to structure the part inside the `<body>` tag of a standard HTML document. If tags that cannot be used inside the `<body>` tag, such as `<head>` or `<title>`, are inserted into the template, Catalysta will refuse to render it.
 
-All files inside the frontend folder (except for `.ejs` files) are treated as static assets, so they can be freely accessed within `.ejs` templates. For example, if you place a `favicon.ico` file in the frontend folder, it will automatically be applied as the website’s favicon in the browser without any additional configuration.
-
-<br />
-
-### 3-4. Reactors
-If you want to create `Reactor` that responds to all requests, simply don't specify a route in the `on()` helper.
-<br />
-
-📄 `index.mjs`
-```javascript
-import catalysta from 'catalysta';
-
-catalysta.on(function(request, response) {
-    console.log('I\'m the reactor!');
-});
-```
-If you don’t define specific routes, the handler will respond to all incoming requests and log them to the console each time. This type of handler, which reacts to every request, is called a `Reactor`.
-
-Since a `Reactor` handles all requests, it can be useful for things like logging.
-For example:
-<br />
-
-📄 `index.mjs`
-```javascript
-import catalysta from 'catalysta';
-
-catalysta.on(function(request, response) {
-    this.logger(request, response);
-});
-```
-This demonstrates how you can use **Catalysta**’s built-in helper to log each request.
+All files inside the frontend folder (except for `.ejs` files) are treated as static assets, so they can be freely accessed within `.ejs` templates. For example, if you place a favicon.ico file in the frontend folder, it will automatically be applied as the website’s favicon in the browser without any additional configuration.
 
 <br />
 
-### 3-6. Built-in Helpers(APIs)
-**Catalysta** provides a variety of `built-in helpers` to assist with development. These built-in helpers are divided into two main categories: `Catalysta Helpers` and `Parameter Helpers`. Parameter Helpers are further divided into `Request Helpers` and `Response Helpers`.
-
-### `catalysta.on()`
-As explained earlier, if you register a function with the `on()` helper without a route, it becomes a `Reactor`—a handler that responds to all incoming requests. If you register a function with a route, it acts as a `Router` or an Endpoint Handler. Using the `on()` helper as a router makes it extremely easy to build a `RESTful API` server.
-<br />
-
-📄 `index.mjs`
-```javascript
-import catalysta from 'catalysta';
-
-catalysta.on('/delete/:id', async function(request, response) {
-    const id = request.params.id;
-    const url = 'http://localhost:3000/list/';
-    if (request.isDelete) {
-        await this.api('DELETE', url + id);
-    }
-});
-```
-You can also register a function along with a state, allowing it to act as a `State Handler`.
-<br />
-
-📄 `index.mjs`
-```javascript
-import catalysta from 'catalysta';
-
-catalysta.on(404, function(request, response) {
-    response.status(404).display('Not found!');
-});
-
-catalysta.on('error', function(request, response) {
-    response.status(500).display('Internal server error!');
-});
-```
-The `on()` helper best represents the minimalism that **Catalysta** aims for. Simply calling the `on()` helper—without any additional setup—starts the web server. Each function defined with the `on()` helper is treated as an individual micro web service.
-
-### `catalysta.off()`
-**Catalysta** introduces a highly abstracted concept where micro web services defined with the `on()` helper can be temporarily disabled or shut down using the `off()` helper. This allows you to limit access or gracefully deactivate specific services when needed.
-<br />
-
-📄 `index.mjs`
-```javascript
-import catalysta from 'catalysta';
-
-catalysta.on('/', function(request, response) {
-    this.homeController(request, response);
-});
-
-catalysta.off('/test', function(request, response) {
-    this.testController(request, response);
-});
-
-catalysta.on('/api{/:id}', function(request, response) {
-    this.apiController(request, response);
-});
-```
-By integrating all routers into the `index.mjs` file, developers can easily manage them at a glance.
-This allows developers to gain a clearer understanding of the overall web service they are responsible for—just by looking at the index.mjs file.
-
-<br />
-
-### `response.display()`
-Provides the necessary information to the requester. Responses can be rendered beautifully in a web browser, or delivered as structured `JSON` data. The `display()` helper supports three formats for output: `Object`, `Text`, and `Template`.
+### 3-5. Usage(Provider/Model)
+A provider is responsible for supplying data. **Catalysta** includes a built-in `request.api()` helper designed to simplify communication between backends, or between the backend and frontend. With the `request.api()` helper, you can fetch data from the server, send data to update or store values, or even change application states—all with minimal effort.
 <br />
 
 📄 `catalysta > backend > catalysts.mjs`
 ```javascript
-const object = {
-    status: 'OK',
-    dataset: [
-        { id: 1, title: 'one' },
-        { id: 2, title: 'two' }
-    ]
-};
-
-catalysta.objectController = function(request, response) {
-    response.display(object);
-};
-
-catalysta.textController = function(request, response) {
-    response.display('<h1> Hello, Catalysta! </h1>');
-};
-
-catalysta.templateController = function(request, response) {
-    response.display('home', object);
-};
-```
-When using the `display()` helper with a template, `EJS` is used as the view engine. As expected, data can be passed to the `EJS` template in the form of an object.
-
-### `request.api()`
-**Catalysta** includes a built-in `api()` helper designed to simplify communication between backends, or between the backend and frontend. With the `api()` helper, you can fetch data from the server, send data to update or store values, or even change application states—all with minimal effort.
-<br />
-
-📄 `catalysta > backend > catalysts.mjs`
-```javascript
-catalysta.apiController = async function(request, response) {
+catalysta.dataProvider = async function(request, response) {
     const id = request.params.id;
     const url = 'http://localhost:3000/list/';
 
@@ -330,8 +292,9 @@ catalysta.apiController = async function(request, response) {
     }
 };
 ```
-For reference, the `api()` helper can be used in both `Catalysta Helper` and `Parameter Helper` styles, allowing access to the this keyword in either approach.
+For reference, the `api()` helper can be used in both `this-based helper` and `parameter-based helper` styles, allowing access to the this keyword in either approach.
 
+**For reference:**
 This document only introduces a few of the most useful built-in helpers. The usage examples provided are for demonstration purposes only, to help illustrate how things work. For detailed usage instructions and a full list of available built-in helpers, please visit the official [**Catalysta**](https://github.com/ohsahngah/catalysta) website!
 
 <br />

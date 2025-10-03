@@ -1,3 +1,6 @@
+process.on('uncaughtException', () => {});
+process.on('unhandledRejection', () => {});
+
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import url from 'url';
@@ -21,37 +24,38 @@ const PROJECT_ROOT = __dirname;
 const app = express();
 const router = express.Router();
 
-
 const logFilePath = path.join(PROJECT_ROOT, 'catalysta', 'access.log');
 
-const MAX_LOG_LINES = 1000;
 let logQueue = Promise.resolve();
 let customNotFoundHandler = null;
 let customErrorHandler = null;
+
+const MAX_LOG_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 async function logToFile(logMessage) {
     logQueue = logQueue.then(async () => {
         try {
             const logDir = path.dirname(logFilePath);
             await fs.mkdir(logDir, { recursive: true });
-            
-            await fs.appendFile(logFilePath, logMessage + '\n', 'utf8');
-            const data = await fs.readFile(logFilePath, 'utf8');
-            const lines = data.split('\n');
 
-            if (lines.length > MAX_LOG_LINES) {
-                const trimmedLines = lines.slice(-MAX_LOG_LINES);
-                const newContent = trimmedLines.join('\n');
-                await fs.writeFile(logFilePath, newContent, 'utf8');
+            await fs.appendFile(logFilePath, logMessage + '\n', 'utf8');
+
+            const stats = await fs.stat(logFilePath);
+            if (stats.size > MAX_LOG_SIZE_BYTES) {
+                console.warn(chalk.bgYellow.bold(' LOGGER:WARN '),
+                    `Log file exceeds ${MAX_LOG_SIZE_BYTES / 1024 / 1024}MB (${(stats.size / 1024 / 1024).toFixed(2)}MB): ${logFilePath}`
+                );
+                // Add feature
             }
         } catch (err) {
-            console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'Failed to write to log file:');
+            console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'Failed to write or check log file.');
         }
     }).catch(err => {
-        console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'An error occurred in the log queue:');
+        console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'An error occurred in the log queue.');
         logQueue = Promise.resolve();
     });
 }
+
 
 async function setupProjectStructure() {
     const config = {
@@ -63,7 +67,6 @@ async function setupProjectStructure() {
                 content: `
 // 'catalysta' is globally available, no import needed.
 // Use traditional function syntax to access 'this' context correctly.
-// e.g., catalysta.on('/', function(req, res) { this.logger(req, res); res.display('index'); });
                 `
             },
             { dir: 'frontend', name: 'index.ejs', content: `<h1>Hello, Catalysta!</h1>` },
@@ -83,10 +86,8 @@ async function setupProjectStructure() {
             const relativePath = path.posix.join(config.mainDir, dir, name);
             try {
                 await fs.writeFile(fullPath, content.trim(), { flag: 'wx' });
-                console.log(chalk.bgGreen.bold(' OK '), `Added ${relativePath}`);
             } catch (err) {
                 if (err.code === 'EEXIST') {
-                    console.log(chalk.bgGreen.bold(' OK '), `Found ${relativePath}`);
                 } else {
                     throw err;
                 }
@@ -98,15 +99,12 @@ async function setupProjectStructure() {
 
         try {
             await fs.access(targetFavicon);
-            console.log(chalk.bgGreen.bold(' OK '), `Found catalysta/frontend/favicon.ico`);
         } catch (accessErr) {
             if (accessErr.code === 'ENOENT') {
                 try {
                     await fs.copyFile(sourceFavicon, targetFavicon);
-                    console.log(chalk.bgGreen.bold(' OK '), `Added catalysta/frontend/favicon.ico`);
                 } catch (copyErr) {
                     if (copyErr.code === 'ENOENT') {
-                        console.warn(chalk.bgYellow.bold(' NG '), `Source favicon.ico not found!`);
                     } else {
                         throw copyErr;
                     }
@@ -132,142 +130,161 @@ const TIMEZONE_MAP = {
     'DEFAULT': 'UTC'
 };
 
-const catalysta = {
-    async api(method, url, data = null) {
-        try {
-            const config = { method, url, ...(data && { data }) };
-            const response = await axios(config);
-            return response.data;
-        } catch (err) {
-            console.error(`${method.toUpperCase()} request to ${url} failed:`, err.message);
-            return err.response ? err.response.data : { error: err.message };
-        }
-    },
-    writeToFile: false,
-    logTimeZone: 'UTC', 
-    timeStamp(city) {
-        const upperCity = (city || '').toUpperCase();
-        const timezone = TIMEZONE_MAP[upperCity] || TIMEZONE_MAP.DEFAULT;
-        const formatter = new Intl.DateTimeFormat('en-US', {
-            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-            second: '2-digit', fractionalSecondDigits: 3, hourCycle: 'h23', timeZone: timezone
-        });
-        const parts = formatter.formatToParts(new Date());
-        const pad = (num, size = 2) => String(num).padStart(size, '0');
-        const partMap = parts.reduce((acc, part) => {
-            if (part.type) acc[part.type] = part.value;
-            return acc;
-        }, {});
-        const year = partMap.year;
-        const month = partMap.month;
-        const day = partMap.day;
-        const hours = pad(partMap.hour);
-        const minutes = pad(partMap.minute);
-        const seconds = pad(partMap.second);
-        const milliseconds = pad(partMap.fractionalSecond, 3);
-        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}`;
-    },
-    logger(req, res) {
-        if (!req || !res) {
-            console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'Request and response parameters are required.');
-            process.exit(1);
-        }
-        if (typeof req !== 'object' || typeof res !== 'object') {
-            console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'Request and response must be objects.');
-            process.exit(1);
-        }
 
-        const start = performance.now();
-
-        const parser = new UAParser();
-        const ua = parser.setUA(req.headers['user-agent']).getResult();
-        const browser = `${ua.browser.name || 'Unknown'} ${ua.browser.version || ''}`;
-        const os = `${ua.os.name || 'Unknown'} ${ua.os.version || ''}`;
-        const device = ua.device.type || 'desktop';
-        const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'Unknown IP';
-
-        res.once('finish', () => {
-            const duration = performance.now() - start;
-            const statusCode = res.statusCode;
-            const timeStamp = this.timeStamp(this.logTimeZone); 
-            const logMessage = [
-                timeStamp, req.method, req.originalUrl, `${duration.toFixed(2)}ms`, '|',
-                `Status: ${statusCode}`, '|', `IP: ${ip}`, '|', `Browser: ${browser}`, '|',
-                `OS: ${os}`, '|', `Device: ${device}`
-            ].join(' ');
-            
-            console.log(logMessage);
-            if (this.writeToFile) {
-                logToFile(logMessage);
-            }
-        });
-    },
-
-    off(path) {
-        router.all(path, (req, res) => {
-            console.log(chalk.bgYellow.bold(' WARN '), `Access to route [${path}] has been disabled.`);
-            res.status(403).json({
-                "catalysta": { "status": { "code": 403, "desc": "forbidden" } }
-            });
-        });
-    },
-    on(path, handler) {
-        const isFunction = (fn) => typeof fn === 'function';
-        const registerErrorHandler = (type, fn) => {
-            if (!isFunction(fn)) {
-                throw new TypeError(`on(${JSON.stringify(type)}) expects a function as the second argument`);
-            }
-            if (type === 404 || type === 'notfound') {
-                customNotFoundHandler = fn;
-            } else if (type === 500 || type === 'error') {
-                customErrorHandler = fn;
-            }
-        };
-        if (typeof path === 'number' || typeof path === 'string') {
-            const normalizedPath = typeof path === 'string' ? path.toLowerCase() : path;
-            if ([404, 'notfound', 500, 'error'].includes(normalizedPath)) {
-                registerErrorHandler(normalizedPath, handler);
-                return;
-            }
+function catalysta(path, handler) {
+    const isFunction = (fn) => typeof fn === 'function';
+    const registerErrorHandler = (type, fn) => {
+        if (!isFunction(fn)) {
+            throw new TypeError(`on(${JSON.stringify(type)}) expects a function as the second argument`);
         }
-        if (isFunction(path) && handler === undefined) {
-            const boundHandler = path.bind(this);
-            app.use((req, res, next) => {
-                try {
-                    boundHandler(req, res, next);
-                    if (!res.headersSent) next();
-                } catch (err) {
-                    next(err);
-                }
-            });
+        if (type === 404 || type === 'notfound') {
+            customNotFoundHandler = fn;
+        } else if (type === 500 || type === 'error') {
+            customErrorHandler = fn;
+        }
+    };
+    if (typeof path === 'number' || typeof path === 'string') {
+        const normalizedPath = typeof path === 'string' ? path.toLowerCase() : path;
+        if ([404, 'notfound', 500, 'error'].includes(normalizedPath)) {
+            registerErrorHandler(normalizedPath, handler);
             return;
         }
-        if (typeof path === 'string' && isFunction(handler)) {
-            router.all(path, handler.bind(this));
-        } else {
-            throw new TypeError('Invalid arguments passed to on()');
-        }
     }
-};
+
+    if (isFunction(path) && handler === undefined) {
+        const boundHandler = path.bind(catalysta);
+        app.use(async (req, res, next) => {
+            // favicon.ico 요청은 무시하고 바로 다음 미들웨어로 넘기기
+            if (req.path === '/favicon.ico') {
+                return next();
+            }
+
+            try {
+                const maybePromise = boundHandler(req, res, next);
+                if (maybePromise instanceof Promise) {
+                    await maybePromise;
+                }
+            } catch (err) {
+                return next(err);
+            }
+
+            if (!res.headersSent) {
+                next();
+            }
+        });
+        return;
+    }
+
+
+    if (typeof path === 'string' && isFunction(handler)) {
+        router.all(path, handler.bind(catalysta));
+    } else {
+        throw new TypeError('Invalid arguments passed to on()');
+    }
+}
+
+
+catalysta.api = async function(method, url, data = null) {
+    try {
+        const config = { method, url, ...(data && { data }) };
+        const response = await axios(config);
+        return response.data;
+    } catch (err) {
+        console.error(`${method.toUpperCase()} request to ${url} failed:`, err.message);
+        return err.response ? err.response.data : { error: err.message };
+    }
+}
+
+catalysta.writeToFile = false;
+catalysta.logTimeZone = 'UTC';
+
+catalysta.timeStamp =  function(city) {
+    const upperCity = (city || '').toUpperCase();
+    const timezone = TIMEZONE_MAP[upperCity] || TIMEZONE_MAP.DEFAULT;
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+        second: '2-digit', fractionalSecondDigits: 3, hourCycle: 'h23', timeZone: timezone
+    });
+    const parts = formatter.formatToParts(new Date());
+    const pad = (num, size = 2) => String(num).padStart(size, '0');
+    const partMap = parts.reduce((acc, part) => {
+        if (part.type) acc[part.type] = part.value;
+        return acc;
+    }, {});
+    const year = partMap.year;
+    const month = partMap.month;
+    const day = partMap.day;
+    const hours = pad(partMap.hour);
+    const minutes = pad(partMap.minute);
+    const seconds = pad(partMap.second);
+    const milliseconds = pad(partMap.fractionalSecond, 3);
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}`;
+}
+
+catalysta.logger = function(req, res) {
+    if (!req || !res) {
+        console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'Request and response parameters are required.');
+        process.exit(1);
+    }
+    if (typeof req !== 'object' || typeof res !== 'object') {
+        console.error(chalk.bgRed.bold(' LOGGER:ERROR '), 'Request and response must be objects.');
+        process.exit(1);
+    }
+
+    const start = performance.now();
+
+    const parser = new UAParser();
+    const ua = parser.setUA(req.headers['user-agent']).getResult();
+    const browser = `${ua.browser.name || 'Unknown'} ${ua.browser.version || ''}`;
+    const os = `${ua.os.name || 'Unknown'} ${ua.os.version || ''}`;
+    const device = ua.device.type || 'desktop';
+    const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'Unknown IP';
+
+    res.once('finish', () => {
+        const duration = performance.now() - start;
+        const statusCode = res.statusCode;
+        const timeStamp = this.timeStamp(this.logTimeZone); 
+        const logMessage = [
+            timeStamp, req.method, req.originalUrl, `${duration.toFixed(2)}ms`, '|',
+            `Status: ${statusCode}`, '|', `IP: ${ip}`, '|', `Browser: ${browser}`, '|',
+            `OS: ${os}`, '|', `Device: ${device}`
+        ].join(' ');
+        
+        console.log(logMessage);
+        if (this.writeToFile) {
+            logToFile(logMessage);
+        }
+    });
+}
+
+
+catalysta.off = function(path) {
+    router.all(path, (req, res) => {
+        console.log(chalk.bgYellow.bold(' WARN '), `Access to route [${path}] has been disabled.`);
+        res.status(403).json({
+            "catalysta": { "status": { "code": 403, "desc": "forbidden" } }
+        });
+    });
+}
+
 
 global.catalysta = catalysta;
 
 (async () => {
     console.log(chalk.bold('Catalista is preparing your project!\n'));
-
     const majorVersion = parseInt(process.versions.node, 10);
     if (majorVersion < 24) {
         console.error(chalk.bgRed.bold(' ERROR '), "Incompatible Node.js version. Catalysta needs v24 or higher, but you're using", 'v' + majorVersion);
         process.exit(1);
     }
-    console.log(chalk.bgGreen.bold(' OK '), 'Found Node.js', 'v' + majorVersion);
+    console.log(chalk.bgGreen.bold(' OK '), 'Linked Node.js', 'v' + majorVersion);
 
     const majorExpressVersion = parseInt(expressVersion.split('.')[0], 10);
     if (majorExpressVersion < 5) {
         console.error(chalk.bgRed.bold(' ERROR '), "Incompatible Express.js version. Catalysta needs v5 or higher, but you're using", 'v' + expressVersion);
         process.exit(1);
     }
-    console.log(chalk.bgGreen.bold(' OK '), 'Found Express.js', 'v' + majorExpressVersion);
+    console.log(chalk.bgGreen.bold(' OK '), 'Linked Express.js', 'v' + majorExpressVersion);
 
     await setupProjectStructure();
 
@@ -379,10 +396,18 @@ global.catalysta = catalysta;
     });
 
     try {
-        const catalystsAbsolutePath = path.join(PROJECT_ROOT, 'catalysta', 'backend', 'catalysts.mjs');
-        const catalystsUrl = url.pathToFileURL(catalystsAbsolutePath).href;
-        
-        await import(catalystsUrl);
+        try {
+            const catalystsAbsolutePath = path.join(PROJECT_ROOT, 'catalysta', 'backend', 'catalysts.mjs');
+            const catalystsUrl = url.pathToFileURL(catalystsAbsolutePath).href;
+
+            await import(catalystsUrl);
+            console.log(chalk.bgGreen.bold(' OK '), 'Linked Catalysta system');
+
+        } catch (err) {
+            console.error(chalk.bgRed.bold(' ERROR '), 'Could not load catalysts.mjs file!');
+            console.error(chalk.red('Reason:'), err.message);
+            process.exit(1); // 종료하지 않고 계속할 수도 있음
+        }
 
         app.use(router);
         app.use((req, res, next) => {
